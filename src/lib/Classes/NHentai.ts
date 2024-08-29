@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosInstance, AxiosError } from 'axios'
 import { load } from 'cheerio'
 import { CookieJar } from 'tough-cookie'
 import { HttpsCookieAgent } from 'http-cookie-agent/http'
@@ -120,6 +120,38 @@ export class NHentai {
                 if (!results.data.length)
                     throw new Error('No doujin results found')
                 return results
+            })
+    }
+
+    /**
+     * Searches for a doujin by an artist
+     * @param artist Name of the artist to search
+     * @param options Options for searching
+     * @returns The result of the search
+     */
+    public artist = async (
+        artist: string,
+        options?: { page?: number }
+    ): Promise<IList> => {
+        if (!artist)
+            throw new Error("The 'artist' parameter shouldn't be undefined")
+        let page = 1
+        if (options?.page && options.page > 0) page = options.page
+        return await this.#axios
+            .get<string>(`${this._options.site}/artist/${artist}/?page=${page}`)
+            .then((res) => {
+                const results = parseDoujinList(
+                    load(res.data),
+                    this._options.site.split('nhentai.')[1] as 'to'
+                )
+                if (!results.data.length)
+                    throw new Error('No author results found')
+                return results
+            })
+            .catch((reason: AxiosError) => {
+                if (reason.response!.status === 404)
+                    throw new Error("Can't find artist")
+                throw new Error(reason.message)
             })
     }
 
